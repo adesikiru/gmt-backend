@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    container_name: gmt_postgres
+    environment:
+      POSTGRES_USER: gmt_user
+      POSTGRES_PASSWORD: gmt_password
+      POSTGRES_DB: gmt_db
+    ports:
+      - "5434:5432"
+    volumes:
+      - gmt_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  gmt_postgres_data:

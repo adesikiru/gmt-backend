@@ -1,0 +1,300 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// ORGANIZATIONAL HIERARCHY
+// ============================================================
+
+model State {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  code      String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lgas            LGA[]
+  memberProfiles  MemberProfile[]
+  admins          Admin[]
+}
+
+model LGA {
+  id        String   @id @default(uuid())
+  name      String
+  stateId   String
+  state     State    @relation(fields: [stateId], references: [id])
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  wards           Ward[]
+  memberProfiles  MemberProfile[]
+  admins          Admin[]
+
+  @@unique([name, stateId])
+}
+
+model Ward {
+  id        String   @id @default(uuid())
+  name      String
+  lgaId     String
+  lga       LGA      @relation(fields: [lgaId], references: [id])
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  pollingUnits    PollingUnit[]
+  memberProfiles  MemberProfile[]
+  admins          Admin[]
+
+  @@unique([name, lgaId])
+}
+
+model PollingUnit {
+  id        String   @id @default(uuid())
+  name      String
+  code      String?
+  wardId    String
+  ward      Ward     @relation(fields: [wardId], references: [id])
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberProfiles MemberProfile[]
+
+  @@unique([name, wardId])
+}
+
+// ============================================================
+// USERS & AUTHENTICATION
+// ============================================================
+
+model User {
+  id                    String    @id @default(uuid())
+  email                 String?   @unique
+  phone                 String?   @unique
+  passwordHash          String
+  accountStatus         String    @default("ACTIVE")  // ACTIVE, SUSPENDED, DEACTIVATED
+  isEmailVerified       Boolean   @default(false)
+  isPhoneVerified       Boolean   @default(false)
+  emailVerifyToken      String?
+  phoneVerifyToken      String?
+  passwordResetToken    String?
+  passwordResetExpires  DateTime?
+  lastLogin             DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  memberProfile  MemberProfile?
+  memberships    Membership[]
+  admin          Admin?
+  auditLogs      AuditLog[]
+}
+
+// ============================================================
+// MEMBER PROFILE
+// ============================================================
+
+model MemberProfile {
+  id                String    @id @default(uuid())
+  userId            String    @unique
+  user              User      @relation(fields: [userId], references: [id])
+  firstName         String
+  lastName          String
+  middleName        String?
+  dateOfBirth       DateTime?
+  gender            String?   // MALE, FEMALE
+  phone             String?
+  address           String?
+  profilePhoto      String?
+
+  // Organizational Location
+  stateId           String?
+  state             State?   @relation(fields: [stateId], references: [id])
+  lgaId             String?
+  lga               LGA?     @relation(fields: [lgaId], references: [id])
+  wardId            String?
+  ward              Ward?    @relation(fields: [wardId], references: [id])
+  pollingUnitId     String?
+  pollingUnit       PollingUnit? @relation(fields: [pollingUnitId], references: [id])
+
+  // Voter Information
+  isRegisteredVoter Boolean  @default(false)
+  voterCardNumber   String?  // VIN - 20 chars
+  nin               String?  // NIN - 11 digits
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  memberships Membership[]
+}
+
+// ============================================================
+// MEMBERSHIPS
+// ============================================================
+
+enum MembershipStatus {
+  PENDING
+  VERIFIED
+  SUSPENDED
+  REJECTED
+  INACTIVE
+}
+
+model Membership {
+  id              String           @id @default(uuid())
+  userId          String
+  user            User             @relation(fields: [userId], references: [id])
+  profileId       String?
+  profile         MemberProfile?   @relation(fields: [profileId], references: [id])
+  membershipNumber String?         @unique
+  status          MembershipStatus @default(PENDING)
+  rejectionReason String?
+  reviewedBy      String?          // Admin userId
+  reviewedAt      DateTime?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+// ============================================================
+// ROLES & PERMISSIONS (RBAC)
+// ============================================================
+
+model Role {
+  id          String   @id @default(uuid())
+  name        String   @unique  // SUPER_ADMIN, STATE_ADMIN, LGA_ADMIN, WARD_ADMIN, MEMBER
+  displayName String
+  description String?
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  rolePermissions RolePermission[]
+  admins          Admin[]
+}
+
+model Permission {
+  id          String   @id @default(uuid())
+  name        String   @unique  // members.read, members.verify, etc.
+  displayName String
+  description String?
+  module      String   // members, states, lgas, events, news, etc.
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  rolePermissions RolePermission[]
+}
+
+model RolePermission {
+  id           String     @id @default(uuid())
+  roleId       String
+  role         Role       @relation(fields: [roleId], references: [id])
+  permissionId String
+  permission   Permission @relation(fields: [permissionId], references: [id])
+  createdAt    DateTime   @default(now())
+
+  @@unique([roleId, permissionId])
+}
+
+// ============================================================
+// ADMINISTRATORS
+// ============================================================
+
+model Admin {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  roleId    String
+  role      Role     @relation(fields: [roleId], references: [id])
+
+  // Scoped to organizational unit
+  stateId   String?
+  state     State?   @relation(fields: [stateId], references: [id])
+  lgaId     String?
+  lga       LGA?     @relation(fields: [lgaId], references: [id])
+  wardId    String?
+  ward      Ward?    @relation(fields: [wardId], references: [id])
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ============================================================
+// CONTENT: EVENTS, NEWS, ANNOUNCEMENTS
+// ============================================================
+
+enum ContentStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model Event {
+  id          String        @id @default(uuid())
+  title       String
+  description String
+  location    String?
+  startDate   DateTime
+  endDate     DateTime?
+  imageUrl    String?
+  status      ContentStatus @default(DRAFT)
+  createdById String
+  stateId     String?       // null = national event
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model News {
+  id          String        @id @default(uuid())
+  title       String
+  slug        String        @unique
+  content     String
+  excerpt     String?
+  imageUrl    String?
+  status      ContentStatus @default(DRAFT)
+  publishedAt DateTime?
+  createdById String
+  stateId     String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model Announcement {
+  id          String        @id @default(uuid())
+  title       String
+  content     String
+  status      ContentStatus @default(DRAFT)
+  publishedAt DateTime?
+  createdById String
+  stateId     String?       // null = national
+  lgaId       String?
+  wardId      String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+// ============================================================
+// AUDIT LOGS
+// ============================================================
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String
+  actor      User     @relation(fields: [actorId], references: [id])
+  action     String   // MEMBER_APPROVED, MEMBER_REJECTED, ADMIN_CREATED, etc.
+  targetType String?  // User, Membership, Event, etc.
+  targetId   String?
+  metadata   Json?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+}
