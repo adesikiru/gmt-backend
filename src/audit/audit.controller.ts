@@ -12,6 +12,8 @@ export class AuditController {
 
   @Get()
   async getLogs(@Query('page') page?: string, @Query('limit') limit?: string, @Query('action') action?: string) {
-    return successResponse(await this.service.getLogs({ page: Number(page), limit: Number(limit), action }));
+    const pageNum = page && !isNaN(Number(page)) ? Number(page) : 1;
+    const limitNum = limit && !isNaN(Number(limit)) ? Number(limit) : 20;
+    return successResponse(await this.service.getLogs({ page: pageNum, limit: limitNum, action }));
   }
 }

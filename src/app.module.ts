@@ -10,6 +10,7 @@ import { EventsModule } from './events/events.module.js';
 import { NewsModule } from './news/news.module.js';
 import { AuditModule } from './audit/audit.module.js';
 import { HealthModule } from './health/health.module.js';
+import { EmpowermentModule } from './empowerment/empowerment.module.js';
 import { PermissionsGuard } from './common/guards/auth.guard.js';
 
 @Module({
@@ -22,6 +23,7 @@ import { PermissionsGuard } from './common/guards/auth.guard.js';
     MembershipsModule,
     EventsModule,
     NewsModule,
+    EmpowermentModule,
     AuditModule,
     HealthModule,
   ],

@@ -160,7 +160,7 @@ async function main() {
     }
   }
 
-  console.log('🎉 Seeding complete!');
+  console.log('🎉 Seeding complete! Database structure and admin account are ready.');
 }
 
 main().catch(console.error).finally(() => prisma.$disconnect());

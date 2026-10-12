@@ -98,6 +98,7 @@ model User {
   memberships    Membership[]
   admin          Admin?
   auditLogs      AuditLog[]
+  eventRsvps     EventRsvp[]
 }
 
 // ============================================================
@@ -252,6 +253,8 @@ model Event {
   stateId     String?       // null = national event
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
+
+  rsvps       EventRsvp[]
 }
 
 model News {
@@ -297,4 +300,38 @@ model AuditLog {
   metadata   Json?
   ipAddress  String?
   createdAt  DateTime @default(now())
+}
+
+// ============================================================
+// EVENT RSVPS
+// ============================================================
+
+model EventRsvp {
+  id        String   @id @default(uuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([eventId, userId])
+}
+
+// ============================================================
+// EMPOWERMENT INITIATIVES
+// ============================================================
+
+model Empowerment {
+  id                  String        @id @default(uuid())
+  title               String
+  description         String
+  category            String        // Youth & Tech, Agriculture, SME Support, Healthcare, Education
+  statOrBudget        String?       // e.g. "₦50M Micro-Fund" or "2,000 Beneficiaries"
+  targetAudience      String?       // e.g. "20 LGAs in Ogun State"
+  icon                String?       // e.g. "💻", "🌾", "🏪", "🩺"
+  status              ContentStatus @default(PUBLISHED)
+  createdById         String
+  stateId             String?       // null = statewide / national
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
 }

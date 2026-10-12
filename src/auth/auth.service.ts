@@ -50,14 +50,17 @@ export class AuthService {
             nin: dto.nin,
           },
         },
-        memberships: {
-          create: {
-            status: 'PENDING',
-          },
-        },
       },
       include: {
         memberProfile: true,
+      },
+    });
+
+    await this.prisma.membership.create({
+      data: {
+        userId: user.id,
+        profileId: user.memberProfile?.id,
+        status: 'PENDING',
       },
     });
 
@@ -96,7 +99,21 @@ export class AuthService {
       data: { lastLogin: new Date() },
     });
 
-    const token = this.jwt.sign({ sub: user.id, email: user.email, phone: user.phone });
+    // Check if user is an admin
+    const adminRecord = await this.prisma.admin.findUnique({
+      where: { userId: user.id },
+      include: { role: true },
+    });
+    const isAdmin = !!adminRecord;
+    const roleName = adminRecord?.role?.name ?? null;
+
+    const token = this.jwt.sign({
+      sub: user.id,
+      email: user.email,
+      phone: user.phone,
+      isAdmin,
+      role: roleName,
+    });
 
     return {
       accessToken: token,
@@ -107,6 +124,8 @@ export class AuthService {
         isEmailVerified: user.isEmailVerified,
         firstName: user.memberProfile?.firstName,
         lastName: user.memberProfile?.lastName,
+        isAdmin,
+        role: roleName,
       },
     };
   }
@@ -147,7 +166,16 @@ export class AuthService {
 
     if (!user) throw new UnauthorizedException();
 
+    const adminRecord = await this.prisma.admin.findUnique({
+      where: { userId },
+      include: { role: true },
+    });
+
     const { passwordHash, emailVerifyToken, passwordResetToken, ...safe } = user;
-    return safe;
+    return {
+      ...safe,
+      isAdmin: !!adminRecord,
+      role: adminRecord?.role?.name ?? null,
+    };
   }
 }

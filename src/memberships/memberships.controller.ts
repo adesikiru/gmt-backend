@@ -28,7 +28,10 @@ export class MembershipsController {
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
-    const data = await this.service.getMembers({ status, stateId, lgaId, wardId, page: Number(page), limit: Number(limit) });
+    const pageNum = page && !isNaN(Number(page)) ? Number(page) : 1;
+    const limitNum = limit && !isNaN(Number(limit)) ? Number(limit) : 20;
+    const validStatus = status && Object.values(MembershipStatus).includes(status) ? status : undefined;
+    const data = await this.service.getMembers({ status: validStatus, stateId, lgaId, wardId, page: pageNum, limit: limitNum });
     return successResponse(data);
   }
 

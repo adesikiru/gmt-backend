@@ -7,24 +7,49 @@ export class MembershipsService {
   constructor(private prisma: PrismaService) {}
 
   async getMembers(filters: { status?: MembershipStatus; stateId?: string; lgaId?: string; wardId?: string; page?: number; limit?: number }) {
-    const { status, stateId, lgaId, wardId, page = 1, limit = 20 } = filters;
+    const page = Math.max(1, Number(filters.page) || 1);
+    const limit = Math.max(1, Number(filters.limit) || 20);
     const skip = (page - 1) * limit;
 
+    const { status, stateId, lgaId, wardId } = filters;
     const where: Record<string, unknown> = {};
     if (status) where.status = status;
     if (stateId || lgaId || wardId) {
-      where.profile = {
-        ...(stateId && { stateId }),
-        ...(lgaId && { lgaId }),
-        ...(wardId && { wardId }),
-      };
+      where.OR = [
+        {
+          profile: {
+            ...(stateId && { stateId }),
+            ...(lgaId && { lgaId }),
+            ...(wardId && { wardId }),
+          },
+        },
+        {
+          user: {
+            memberProfile: {
+              ...(stateId && { stateId }),
+              ...(lgaId && { lgaId }),
+              ...(wardId && { wardId }),
+            },
+          },
+        },
+      ];
     }
 
     const [memberships, total] = await Promise.all([
       this.prisma.membership.findMany({
         where,
         include: {
-          user: { select: { id: true, email: true, phone: true, createdAt: true } },
+          user: {
+            select: {
+              id: true,
+              email: true,
+              phone: true,
+              createdAt: true,
+              memberProfile: {
+                include: { state: true, lga: true, ward: true, pollingUnit: true },
+              },
+            },
+          },
           profile: {
             include: { state: true, lga: true, ward: true, pollingUnit: true },
           },
@@ -36,19 +61,37 @@ export class MembershipsService {
       this.prisma.membership.count({ where }),
     ]);
 
-    return { memberships, total, page, limit, totalPages: Math.ceil(total / limit) };
+    const mapped = memberships.map((m) => ({
+      ...m,
+      profile: m.profile ?? m.user?.memberProfile ?? null,
+    }));
+
+    return { memberships: mapped, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
   async getMembership(id: string) {
     const m = await this.prisma.membership.findUnique({
       where: { id },
       include: {
-        user: { select: { id: true, email: true, phone: true, createdAt: true } },
+        user: {
+          select: {
+            id: true,
+            email: true,
+            phone: true,
+            createdAt: true,
+            memberProfile: {
+              include: { state: true, lga: true, ward: true, pollingUnit: true },
+            },
+          },
+        },
         profile: { include: { state: true, lga: true, ward: true, pollingUnit: true } },
       },
     });
     if (!m) throw new NotFoundException('Membership not found');
-    return m;
+    return {
+      ...m,
+      profile: m.profile ?? m.user?.memberProfile ?? null,
+    };
   }
 
   async updateStatus(id: string, status: MembershipStatus, reviewedBy: string, reason?: string) {
@@ -90,12 +133,24 @@ export class MembershipsService {
   }
 
   async getMyMembership(userId: string) {
-    return this.prisma.membership.findFirst({
+    const m = await this.prisma.membership.findFirst({
       where: { userId },
       orderBy: { createdAt: 'desc' },
       include: {
-        profile: { include: { state: true, lga: true, ward: true } },
+        profile: { include: { state: true, lga: true, ward: true, pollingUnit: true } },
+        user: {
+          select: {
+            memberProfile: {
+              include: { state: true, lga: true, ward: true, pollingUnit: true },
+            },
+          },
+        },
       },
     });
+    if (!m) return null;
+    return {
+      ...m,
+      profile: m.profile ?? m.user?.memberProfile ?? null,
+    };
   }
 }
