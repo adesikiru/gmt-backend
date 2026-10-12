@@ -27,6 +27,11 @@ export class AllExceptionsFilter implements ExceptionFilter {
           message = 'Validation failed';
         }
       }
+    } else if (exception instanceof Error) {
+      console.error('Unhandled Server Exception:', exception);
+      message = exception.message || 'Internal server error';
+    } else {
+      console.error('Unknown Exception:', exception);
     }
 
     response.status(status).json({
