@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { NewsService, AnnouncementsService } from './news.service.js';
 import { JwtAuthGuard, PermissionsGuard } from '../common/guards/auth.guard.js';
 import { RequirePermissions } from '../common/decorators/permissions.decorator.js';
@@ -32,6 +32,13 @@ export class NewsController {
   @Patch(':id/publish')
   async publish(@Param('id') id: string) {
     return successResponse(await this.newsService.publish(id), 'Published');
+  }
+
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions('news.create')
+  @Delete(':id')
+  async delete(@Param('id') id: string) {
+    return successResponse(await this.newsService.delete(id), 'News deleted');
   }
 }
 

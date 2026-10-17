@@ -1,7 +1,7 @@
-import { Injectable, BadRequestException, UnauthorizedException, ConflictException } from '@nestjs/common';
+import { Injectable, BadRequestException, UnauthorizedException, ConflictException, NotFoundException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { RegisterDto, LoginDto } from './auth.dto.js';
+import { RegisterDto, LoginDto, UpdateProfileDto, UpdatePasswordDto } from './auth.dto.js';
 import * as bcrypt from 'bcryptjs';
 import { randomBytes } from 'crypto';
 
@@ -177,5 +177,86 @@ export class AuthService {
       isAdmin: !!adminRecord,
       role: adminRecord?.role?.name ?? null,
     };
+  }
+
+  async updateProfile(userId: string, dto: UpdateProfileDto) {
+    if (dto.phone) {
+      const existingPhone = await this.prisma.user.findFirst({
+        where: { phone: dto.phone, id: { not: userId } },
+      });
+      if (existingPhone) {
+        throw new ConflictException('Phone number is already associated with another account');
+      }
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { phone: dto.phone },
+      });
+    }
+
+    const currentProfile = await this.prisma.memberProfile.findUnique({
+      where: { userId },
+    });
+
+    const profileData: Record<string, unknown> = {};
+    if (dto.firstName !== undefined) profileData.firstName = dto.firstName;
+    if (dto.lastName !== undefined) profileData.lastName = dto.lastName;
+    if (dto.middleName !== undefined) profileData.middleName = dto.middleName;
+    if (dto.nin !== undefined) profileData.nin = dto.nin;
+    if (dto.isRegisteredVoter !== undefined) {
+      profileData.isRegisteredVoter = dto.isRegisteredVoter;
+      if (dto.isRegisteredVoter) {
+        if (dto.voterCardNumber !== undefined) profileData.voterCardNumber = dto.voterCardNumber;
+        if (dto.stateId !== undefined) profileData.stateId = dto.stateId || null;
+        if (dto.lgaId !== undefined) profileData.lgaId = dto.lgaId || null;
+        if (dto.wardId !== undefined) profileData.wardId = dto.wardId || null;
+        if (dto.pollingUnitId !== undefined) profileData.pollingUnitId = dto.pollingUnitId || null;
+      }
+    } else {
+      if (dto.voterCardNumber !== undefined) profileData.voterCardNumber = dto.voterCardNumber;
+      if (dto.stateId !== undefined) profileData.stateId = dto.stateId || null;
+      if (dto.lgaId !== undefined) profileData.lgaId = dto.lgaId || null;
+      if (dto.wardId !== undefined) profileData.wardId = dto.wardId || null;
+      if (dto.pollingUnitId !== undefined) profileData.pollingUnitId = dto.pollingUnitId || null;
+    }
+
+    if (currentProfile) {
+      await this.prisma.memberProfile.update({
+        where: { userId },
+        data: profileData,
+      });
+    } else {
+      const newProfile = await this.prisma.memberProfile.create({
+        data: {
+          userId,
+          firstName: dto.firstName || 'Member',
+          lastName: dto.lastName || '',
+          ...profileData,
+        },
+      });
+
+      // Link to existing membership if needed
+      await this.prisma.membership.updateMany({
+        where: { userId, profileId: null },
+        data: { profileId: newProfile.id },
+      });
+    }
+
+    return this.getProfile(userId);
+  }
+
+  async updatePassword(userId: string, dto: UpdatePasswordDto) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('User not found');
+
+    const valid = await bcrypt.compare(dto.currentPassword, user.passwordHash);
+    if (!valid) throw new BadRequestException('Current password does not match');
+
+    const newHash = await bcrypt.hash(dto.newPassword, 12);
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash: newHash },
+    });
+
+    return { message: 'Password updated successfully' };
   }
 }

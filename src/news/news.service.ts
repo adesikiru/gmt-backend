@@ -24,6 +24,10 @@ export class NewsService {
   async publish(id: string) {
     return this.prisma.news.update({ where: { id }, data: { status: 'PUBLISHED', publishedAt: new Date() } });
   }
+
+  async delete(id: string) {
+    return this.prisma.news.delete({ where: { id } });
+  }
 }
 
 @Injectable()

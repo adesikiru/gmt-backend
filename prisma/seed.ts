@@ -137,6 +137,7 @@ async function main() {
 
   // Seed Super Admin
   const superAdminRole = await prisma.role.findUnique({ where: { name: 'SUPER_ADMIN' } });
+  let adminUserId = '';
   if (superAdminRole) {
     const existingAdmin = await prisma.user.findUnique({ where: { email: 'admin@gmt.ng' } });
     if (!existingAdmin) {
@@ -154,13 +155,186 @@ async function main() {
       await prisma.admin.create({
         data: { userId: adminUser.id, roleId: superAdminRole.id },
       });
+      adminUserId = adminUser.id;
       console.log('✅ Super Admin created: admin@gmt.ng / Admin@GMT2026');
     } else {
+      adminUserId = existingAdmin.id;
       console.log('ℹ️  Super Admin already exists');
     }
   }
 
-  console.log('🎉 Seeding complete! Database structure and admin account are ready.');
+  // Seed Events
+  const SEED_EVENTS = [
+    {
+      title: 'Ogun Central Grassroots Leadership Townhall',
+      description: 'Strategic gathering of ward mobilizers and grassroots executives to discuss development initiatives, voter sensitization, and community empowerment across Abeokuta and surrounding constituencies.',
+      location: 'June 12 Cultural Centre, Kuto, Abeokuta',
+      startDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // +14 days
+      endDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000 + 4 * 60 * 60 * 1000),
+      status: 'PUBLISHED' as const,
+      stateId: ogunState.id,
+      createdById: adminUserId,
+    },
+    {
+      title: 'Ward Coordinators Digital Verification Workshop',
+      description: 'Comprehensive technical workshop training ward administrators and polling unit leads on verifying voter records, NIN validation, and registering new grassroots members.',
+      location: 'Ijebu-Ode Town Hall, Ijebu-Ode',
+      startDate: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000), // +21 days
+      endDate: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000 + 5 * 60 * 60 * 1000),
+      status: 'PUBLISHED' as const,
+      stateId: ogunState.id,
+      createdById: adminUserId,
+    },
+    {
+      title: 'Grassroots Farmers & SME Cooperative Forum',
+      description: 'Distribution of agricultural inputs, high-yield seedlings, fertilizer vouchers, and SME seed grants to rural cooperative members across Ogun State.',
+      location: 'Sango-Ota Community Centre, Ota',
+      startDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // +30 days
+      endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000 + 4 * 60 * 60 * 1000),
+      status: 'PUBLISHED' as const,
+      stateId: ogunState.id,
+      createdById: adminUserId,
+    },
+    {
+      title: 'Ogun West Youth Innovation & Leadership Summit',
+      description: 'Interactive symposium connecting young tech innovators, artisans, and student leaders with mentorship, startup grants, and digital skill vouchers.',
+      location: 'Ilaro Civic Centre, Ilaro',
+      startDate: new Date(Date.now() + 40 * 24 * 60 * 60 * 1000), // +40 days
+      endDate: new Date(Date.now() + 40 * 24 * 60 * 60 * 1000 + 5 * 60 * 60 * 1000),
+      status: 'PUBLISHED' as const,
+      stateId: ogunState.id,
+      createdById: adminUserId,
+    },
+  ];
+
+  for (const evt of SEED_EVENTS) {
+    const existing = await prisma.event.findFirst({ where: { title: evt.title } });
+    if (!existing) {
+      await prisma.event.create({ data: evt });
+    }
+  }
+  console.log(`✅ ${SEED_EVENTS.length} Events seeded`);
+
+  // Seed Empowerments
+  const SEED_EMPOWERMENTS = [
+    {
+      title: 'Youth Tech & Digital Skills Initiative',
+      description: 'Providing subsidized laptops, intensive digital marketing, web engineering training, and internet stipends for 2,000 ambitious youth across Ogun State wards.',
+      category: 'Youth & Tech',
+      statOrBudget: '2,000+ Youths Targeted',
+      targetAudience: '20 LGAs in Ogun State',
+      icon: '💻',
+      status: 'PUBLISHED' as const,
+      stateId: ogunState.id,
+      createdById: adminUserId,
+    },
+    {
+      title: 'Market Women & SME Support Grants',
+      description: 'Direct micro-grants and point-of-sale equipment provided to trade cooperatives to expand local businesses and support market women.',
+      category: 'SME Support',
+      statOrBudget: '₦50M Micro-Fund',
+      targetAudience: 'Market Cooperatives in Ogun',
+      icon: '🏪',
+      status: 'PUBLISHED' as const,
+      stateId: ogunState.id,
+      createdById: adminUserId,
+    },
+    {
+      title: 'Grassroots Agri-Seedling Distribution',
+      description: 'High-yield hybrid seeds, eco-friendly fertilizers, and farming implements distributed directly to rural farmer clusters.',
+      category: 'Agriculture',
+      statOrBudget: '20 LGAs Covered',
+      targetAudience: 'Smallholder Farmers',
+      icon: '🌾',
+      status: 'PUBLISHED' as const,
+      stateId: ogunState.id,
+      createdById: adminUserId,
+    },
+    {
+      title: 'Community Healthcare & Wellness Outreach',
+      description: 'Free hypertension screening, blood sugar checks, distribution of prescription reading glasses, and health kits at ward centres.',
+      category: 'Healthcare',
+      statOrBudget: '10,000 Beneficiaries',
+      targetAudience: 'Ward Community Centres',
+      icon: '🩺',
+      status: 'PUBLISHED' as const,
+      stateId: ogunState.id,
+      createdById: adminUserId,
+    },
+    {
+      title: 'Artisan & Vocational Apprenticeship Toolkits',
+      description: 'Providing certified apprentices with modern equipment, toolboxes, and starter funds for mechanics, fashion designers, and electricians.',
+      category: 'Education & Skills',
+      statOrBudget: '1,500 Artisans Equipped',
+      targetAudience: 'Young Vocational Apprentices',
+      icon: '⚙️',
+      status: 'PUBLISHED' as const,
+      stateId: ogunState.id,
+      createdById: adminUserId,
+    },
+  ];
+
+  for (const emp of SEED_EMPOWERMENTS) {
+    const existing = await prisma.empowerment.findFirst({ where: { title: emp.title } });
+    if (!existing) {
+      await prisma.empowerment.create({ data: emp });
+    }
+  }
+  console.log(`✅ ${SEED_EMPOWERMENTS.length} Empowerment initiatives seeded`);
+
+  // Seed Media & Press Releases (News)
+  const SEED_NEWS = [
+    {
+      title: 'GMT Ogun State Digital Grassroots Portal Officially Unveiled',
+      slug: 'gmt-ogun-state-digital-grassroots-portal-officially-unveiled',
+      excerpt: 'Grassroots Movement for Tinubu activates full digital membership registration across all 20 LGAs and 236 Wards in Ogun State.',
+      content: 'The Grassroots Movement for Tinubu (GMT) has officially launched its state-of-the-art digital membership registration and mobilization portal in Ogun State. The platform enables citizens across all 20 Local Government Areas and 236 Electoral Wards to verify their voter status, register as active members, and connect directly with ward coordinators. Speaking at the launch in Abeokuta, leaders emphasized that this digital initiative brings transparent, accountable grassroots organizing directly to the community level.',
+      status: 'PUBLISHED' as const,
+      publishedAt: new Date(),
+      stateId: ogunState.id,
+      createdById: adminUserId,
+    },
+    {
+      title: 'Youth & Women Empowerment Tour Concludes in Abeokuta',
+      slug: 'youth-women-empowerment-tour-concludes-in-abeokuta',
+      excerpt: 'Over 1,200 micro-entrepreneurs received digital tools, vocational equipment, and business startup grants under the GMT umbrella.',
+      content: 'The first phase of the GMT Grassroots Empowerment Tour concluded successfully in Abeokuta. More than 1,200 young innovators, traders, and cooperative members received practical business kits, agricultural vouchers, and startup grants. Ward leaders praised the direct delivery mechanism that ensures support reaches real grassroots citizens at the ward level.',
+      status: 'PUBLISHED' as const,
+      publishedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
+      stateId: ogunState.id,
+      createdById: adminUserId,
+    },
+    {
+      title: 'Ward-by-Ward Voter Sensitization & Verification Drive Commences',
+      slug: 'ward-by-ward-voter-sensitization-verification-drive-commences',
+      excerpt: 'Ensuring all citizens confirm their 20-digit Voter Identification Numbers (VIN) and polling units ahead of upcoming elections.',
+      content: 'A state-wide voter awareness campaign has kicked off across Ogun State, spearheaded by GMT ward executives. The campaign helps registered voters confirm their 20-digit Voter Identification Numbers (VIN), verify their designated polling units, and assists eligible non-voters in learning about the ongoing voter registration processes.',
+      status: 'PUBLISHED' as const,
+      publishedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+      stateId: ogunState.id,
+      createdById: adminUserId,
+    },
+    {
+      title: 'GMT Agricultural Cooperative Cluster Launched to Boost Food Security',
+      slug: 'gmt-agricultural-cooperative-cluster-launched',
+      excerpt: 'Farming clusters across Yewa, Remo, and Ijebu receive subsidized fertilizers and hybrid seedlings.',
+      content: 'In line with national Renewed Hope agricultural goals, GMT has inaugurated the Ogun State Farmers Empowerment Cluster. Over 50 agricultural cooperative societies across Yewa North, Remo North, and Ijebu East have been onboarded to receive subsidized inputs and mechanization support.',
+      status: 'PUBLISHED' as const,
+      publishedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
+      stateId: ogunState.id,
+      createdById: adminUserId,
+    },
+  ];
+
+  for (const n of SEED_NEWS) {
+    const existing = await prisma.news.findUnique({ where: { slug: n.slug } });
+    if (!existing) {
+      await prisma.news.create({ data: n });
+    }
+  }
+  console.log(`✅ ${SEED_NEWS.length} News & Press releases seeded`);
+
+  console.log('🎉 Seeding complete! Database structure, admin account, events, empowerments, and media releases are ready.');
 }
 
 main().catch(console.error).finally(() => prisma.$disconnect());

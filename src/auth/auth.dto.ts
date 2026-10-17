@@ -82,3 +82,62 @@ export class ResetPasswordDto {
   @MinLength(8)
   password: string;
 }
+
+export class UpdateProfileDto {
+  @IsOptional()
+  @IsString()
+  firstName?: string;
+
+  @IsOptional()
+  @IsString()
+  lastName?: string;
+
+  @IsOptional()
+  @IsString()
+  middleName?: string;
+
+  @IsOptional()
+  @Matches(/^(\+234|0)[789][01]\d{8}$/, { message: 'Invalid Nigerian phone number' })
+  phone?: string;
+
+  // Organizational location
+  @IsOptional()
+  @IsUUID()
+  stateId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  lgaId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  wardId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  pollingUnitId?: string;
+
+  // Voter info
+  @IsOptional()
+  @IsBoolean()
+  isRegisteredVoter?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @Length(20, 20, { message: 'VIN must be exactly 20 characters' })
+  voterCardNumber?: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(11, 11, { message: 'NIN must be exactly 11 digits' })
+  nin?: string;
+}
+
+export class UpdatePasswordDto {
+  @IsString()
+  currentPassword: string;
+
+  @IsString()
+  @MinLength(8, { message: 'Password must be at least 8 characters' })
+  newPassword: string;
+}
