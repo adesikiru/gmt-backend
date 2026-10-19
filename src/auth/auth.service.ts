@@ -30,6 +30,9 @@ export class AuthService {
     const passwordHash = await bcrypt.hash(dto.password, 12);
     const verifyToken = randomBytes(32).toString('hex');
 
+    // Resolve organizational / voter location to ensure valid database records
+    const location = await this.resolveLocation(dto);
+
     const user = await this.prisma.user.create({
       data: {
         email: dto.email,
@@ -41,10 +44,10 @@ export class AuthService {
             firstName: dto.firstName,
             lastName: dto.lastName,
             middleName: dto.middleName,
-            stateId: dto.stateId,
-            lgaId: dto.lgaId,
-            wardId: dto.wardId,
-            pollingUnitId: dto.pollingUnitId,
+            stateId: location.stateId,
+            lgaId: location.lgaId,
+            wardId: location.wardId,
+            pollingUnitId: location.pollingUnitId,
             isRegisteredVoter: dto.isRegisteredVoter ?? false,
             voterCardNumber: dto.voterCardNumber,
             nin: dto.nin,
@@ -206,17 +209,26 @@ export class AuthService {
       profileData.isRegisteredVoter = dto.isRegisteredVoter;
       if (dto.isRegisteredVoter) {
         if (dto.voterCardNumber !== undefined) profileData.voterCardNumber = dto.voterCardNumber;
-        if (dto.stateId !== undefined) profileData.stateId = dto.stateId || null;
-        if (dto.lgaId !== undefined) profileData.lgaId = dto.lgaId || null;
-        if (dto.wardId !== undefined) profileData.wardId = dto.wardId || null;
-        if (dto.pollingUnitId !== undefined) profileData.pollingUnitId = dto.pollingUnitId || null;
       }
-    } else {
-      if (dto.voterCardNumber !== undefined) profileData.voterCardNumber = dto.voterCardNumber;
-      if (dto.stateId !== undefined) profileData.stateId = dto.stateId || null;
-      if (dto.lgaId !== undefined) profileData.lgaId = dto.lgaId || null;
-      if (dto.wardId !== undefined) profileData.wardId = dto.wardId || null;
-      if (dto.pollingUnitId !== undefined) profileData.pollingUnitId = dto.pollingUnitId || null;
+    } else if (dto.voterCardNumber !== undefined) {
+      profileData.voterCardNumber = dto.voterCardNumber;
+    }
+
+    if (
+      dto.stateId ||
+      dto.stateName ||
+      dto.lgaId ||
+      dto.lgaName ||
+      dto.wardId ||
+      dto.wardName ||
+      dto.pollingUnitId ||
+      dto.pollingUnitName
+    ) {
+      const loc = await this.resolveLocation(dto);
+      if (loc.stateId !== null) profileData.stateId = loc.stateId;
+      if (loc.lgaId !== null) profileData.lgaId = loc.lgaId;
+      if (loc.wardId !== null) profileData.wardId = loc.wardId;
+      if (loc.pollingUnitId !== null) profileData.pollingUnitId = loc.pollingUnitId;
     }
 
     if (currentProfile) {
@@ -258,5 +270,140 @@ export class AuthService {
     });
 
     return { message: 'Password updated successfully' };
+  }
+
+  /**
+   * Resolves INEC electoral location hierarchy into valid database records.
+   * Auto-creates or maps State -> LGA -> Ward -> PollingUnit as needed.
+   */
+  private async resolveLocation(dto: {
+    stateId?: string;
+    stateName?: string;
+    lgaId?: string;
+    lgaName?: string;
+    wardId?: string;
+    wardName?: string;
+    pollingUnitId?: string;
+    pollingUnitName?: string;
+  }) {
+    let resolvedStateId: string | null = null;
+    let resolvedLgaId: string | null = null;
+    let resolvedWardId: string | null = null;
+    let resolvedPollingUnitId: string | null = null;
+
+    // 1. Resolve State
+    if (dto.stateId || dto.stateName) {
+      let state = dto.stateId
+        ? await this.prisma.state.findUnique({ where: { id: dto.stateId } }).catch(() => null)
+        : null;
+
+      if (!state && dto.stateName) {
+        const cleanName = dto.stateName.replace(/^\d+\s*-\s*/, '').trim();
+        state = await this.prisma.state.findFirst({
+          where: {
+            OR: [
+              { name: { contains: cleanName, mode: 'insensitive' } },
+              { code: { equals: cleanName.substring(0, 3).toUpperCase() } },
+            ],
+          },
+        });
+        if (!state) {
+          state = await this.prisma.state.create({
+            data: {
+              name: cleanName,
+              code: cleanName.substring(0, 3).toUpperCase(),
+            },
+          });
+        }
+      }
+      resolvedStateId = state?.id ?? null;
+    }
+
+    // 2. Resolve LGA
+    if (resolvedStateId && (dto.lgaId || dto.lgaName)) {
+      let lga = dto.lgaId
+        ? await this.prisma.lGA.findUnique({ where: { id: dto.lgaId } }).catch(() => null)
+        : null;
+
+      if (!lga && dto.lgaName) {
+        const cleanName = dto.lgaName.replace(/^\d+\s*-\s*/, '').trim();
+        lga = await this.prisma.lGA.findFirst({
+          where: {
+            stateId: resolvedStateId,
+            name: { contains: cleanName, mode: 'insensitive' },
+          },
+        });
+        if (!lga) {
+          lga = await this.prisma.lGA.create({
+            data: {
+              name: cleanName,
+              stateId: resolvedStateId,
+            },
+          });
+        }
+      }
+      resolvedLgaId = lga?.id ?? null;
+    }
+
+    // 3. Resolve Ward
+    if (resolvedLgaId && (dto.wardId || dto.wardName)) {
+      let ward = dto.wardId
+        ? await this.prisma.ward.findUnique({ where: { id: dto.wardId } }).catch(() => null)
+        : null;
+
+      if (!ward && dto.wardName) {
+        const cleanName = dto.wardName.replace(/^\d+\s*-\s*/, '').trim();
+        ward = await this.prisma.ward.findFirst({
+          where: {
+            lgaId: resolvedLgaId,
+            name: { contains: cleanName, mode: 'insensitive' },
+          },
+        });
+        if (!ward) {
+          ward = await this.prisma.ward.create({
+            data: {
+              name: cleanName,
+              lgaId: resolvedLgaId,
+            },
+          });
+        }
+      }
+      resolvedWardId = ward?.id ?? null;
+    }
+
+    // 4. Resolve Polling Unit
+    if (resolvedWardId && (dto.pollingUnitId || dto.pollingUnitName)) {
+      let pu = dto.pollingUnitId
+        ? await this.prisma.pollingUnit.findUnique({ where: { id: dto.pollingUnitId } }).catch(() => null)
+        : null;
+
+      if (!pu && dto.pollingUnitName) {
+        const cleanName = dto.pollingUnitName.trim();
+        pu = await this.prisma.pollingUnit.findFirst({
+          where: {
+            wardId: resolvedWardId,
+            name: { equals: cleanName, mode: 'insensitive' },
+          },
+        });
+        if (!pu) {
+          const codeMatch = cleanName.match(/^(\d{1,4})/);
+          pu = await this.prisma.pollingUnit.create({
+            data: {
+              name: cleanName,
+              code: codeMatch ? codeMatch[1] : undefined,
+              wardId: resolvedWardId,
+            },
+          });
+        }
+      }
+      resolvedPollingUnitId = pu?.id ?? null;
+    }
+
+    return {
+      stateId: resolvedStateId,
+      lgaId: resolvedLgaId,
+      wardId: resolvedWardId,
+      pollingUnitId: resolvedPollingUnitId,
+    };
   }
 }

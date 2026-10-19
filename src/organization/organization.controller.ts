@@ -70,4 +70,29 @@ export class OrganizationController {
   async createPollingUnit(@Body() body: { name: string; code?: string; wardId: string }) {
     return successResponse(await this.orgService.createPollingUnit(body), 'Polling unit created');
   }
+
+  // ---- INEC PUBLIC DIRECTORY ENDPOINTS ----
+  @Get('inec/states')
+  async getInecStates() {
+    return successResponse(await this.orgService.getInecStates());
+  }
+
+  @Get('inec/lgas')
+  async getInecLGAs(@Query('stateId') stateId: string) {
+    if (!stateId) return successResponse([]);
+    return successResponse(await this.orgService.getInecLGAs(stateId));
+  }
+
+  @Get('inec/wards')
+  async getInecWards(@Query('lgaId') lgaId: string) {
+    if (!lgaId) return successResponse([]);
+    return successResponse(await this.orgService.getInecWards(lgaId));
+  }
+
+  @Get('inec/polling-units')
+  async getInecPollingUnits(@Query('wardId') wardId: string) {
+    if (!wardId) return successResponse([]);
+    return successResponse(await this.orgService.getInecPollingUnits(wardId));
+  }
 }
+

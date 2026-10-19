@@ -25,20 +25,36 @@ export class RegisterDto {
 
   // Organizational location
   @IsOptional()
-  @IsUUID()
+  @IsString()
   stateId?: string;
 
   @IsOptional()
-  @IsUUID()
+  @IsString()
+  stateName?: string;
+
+  @IsOptional()
+  @IsString()
   lgaId?: string;
 
   @IsOptional()
-  @IsUUID()
+  @IsString()
+  lgaName?: string;
+
+  @IsOptional()
+  @IsString()
   wardId?: string;
 
   @IsOptional()
-  @IsUUID()
+  @IsString()
+  wardName?: string;
+
+  @IsOptional()
+  @IsString()
   pollingUnitId?: string;
+
+  @IsOptional()
+  @IsString()
+  pollingUnitName?: string;
 
   // Voter info
   @IsOptional()
@@ -102,20 +118,36 @@ export class UpdateProfileDto {
 
   // Organizational location
   @IsOptional()
-  @IsUUID()
+  @IsString()
   stateId?: string;
 
   @IsOptional()
-  @IsUUID()
+  @IsString()
+  stateName?: string;
+
+  @IsOptional()
+  @IsString()
   lgaId?: string;
 
   @IsOptional()
-  @IsUUID()
+  @IsString()
+  lgaName?: string;
+
+  @IsOptional()
+  @IsString()
   wardId?: string;
 
   @IsOptional()
-  @IsUUID()
+  @IsString()
+  wardName?: string;
+
+  @IsOptional()
+  @IsString()
   pollingUnitId?: string;
+
+  @IsOptional()
+  @IsString()
+  pollingUnitName?: string;
 
   // Voter info
   @IsOptional()
