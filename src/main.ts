@@ -11,21 +11,30 @@ async function bootstrap() {
   app.use(helmet());
   const allowedOrigins = [
     'http://localhost:3000',
+    'http://localhost:3001',
+    'http://localhost:3002',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:3001',
+    'http://127.0.0.1:3002',
     'https://gmt-ogun.vercel.app',
     ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL.replace(/\/$/, '')] : []),
   ];
   app.enableCors({
     origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-      // Allow requests with no origin (e.g. Postman, mobile apps)
+      // Allow requests with no origin (e.g. Postman, mobile apps, server-to-server)
       if (!origin) return callback(null, true);
       const cleanOrigin = origin.replace(/\/$/, '');
+      const isLocalhost = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(cleanOrigin);
       if (
+        isLocalhost ||
         allowedOrigins.includes(cleanOrigin) ||
-        cleanOrigin.endsWith('.vercel.app')
+        cleanOrigin.endsWith('.vercel.app') ||
+        cleanOrigin.endsWith('.onrender.com')
       ) {
         return callback(null, true);
       }
-      callback(new Error(`CORS: ${origin} not allowed`));
+      // Return false without throwing an unhandled exception
+      return callback(null, false);
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],

@@ -245,9 +245,14 @@ model Event {
   title       String
   description String
   location    String?
+  category    String?       @default("Leadership Summit")
   startDate   DateTime
   endDate     DateTime?
   imageUrl    String?
+  images      String[]      @default([])
+  videoUrl    String?
+  videos      String[]      @default([])
+  isPast      Boolean       @default(false)
   status      ContentStatus @default(DRAFT)
   createdById String
   stateId     String?       // null = national event

@@ -1,12 +1,17 @@
-import { IsEmail, IsOptional, IsString, MinLength, Matches, IsBoolean, Length, IsUUID } from 'class-validator';
+import { IsEmail, IsOptional, IsString, MinLength, Matches, IsBoolean, Length } from 'class-validator';
+import { Transform } from 'class-transformer';
 
 export class RegisterDto {
   @IsOptional()
-  @IsEmail()
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))
+  @IsEmail({}, { message: 'Please enter a valid email address' })
   email?: string;
 
   @IsOptional()
-  @Matches(/^(\+234|0)[789][01]\d{8}$/, { message: 'Invalid Nigerian phone number' })
+  @Transform(({ value }) => (typeof value === 'string' ? value.replace(/[\s\-\(\)\.]/g, '').trim() : value))
+  @Matches(/^(\+?234|0)[789][01]\d{8}$/, {
+    message: 'Invalid phone number. Must be a valid 11-digit Nigerian phone number (e.g. 08012345678 or +2348012345678)',
+  })
   phone?: string;
 
   @IsString()
@@ -113,7 +118,15 @@ export class UpdateProfileDto {
   middleName?: string;
 
   @IsOptional()
-  @Matches(/^(\+234|0)[789][01]\d{8}$/, { message: 'Invalid Nigerian phone number' })
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))
+  @IsEmail({}, { message: 'Please enter a valid email address' })
+  email?: string;
+
+  @IsOptional()
+  @Transform(({ value }) => (typeof value === 'string' ? value.replace(/[\s\-\(\)\.]/g, '').trim() : value))
+  @Matches(/^(\+?234|0)[789][01]\d{8}$/, {
+    message: 'Invalid phone number. Must be a valid 11-digit Nigerian phone number (e.g. 08012345678 or +2348012345678)',
+  })
   phone?: string;
 
   // Organizational location
