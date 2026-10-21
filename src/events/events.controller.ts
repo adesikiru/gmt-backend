@@ -12,13 +12,18 @@ export class EventsController {
   constructor(private service: EventsService) {}
 
   @Get()
-  async findAll(@Query('stateId') stateId?: string, @Query('userId') userId?: string) {
-    return successResponse(await this.service.findAll(stateId, userId));
+  async findAll(
+    @Query('stateId') stateId?: string,
+    @Query('userId') userId?: string,
+    @Query('isPast') isPast?: string,
+  ) {
+    const isPastBool = isPast === 'true' ? true : isPast === 'false' ? false : undefined;
+    return successResponse(await this.service.findAll(stateId, userId, isPastBool));
   }
 
   @Get(':id')
-  async findOne(@Param('id') id: string) {
-    return successResponse(await this.service.findOne(id));
+  async findOne(@Param('id') id: string, @Query('userId') userId?: string) {
+    return successResponse(await this.service.findOne(id, userId));
   }
 
   @UseGuards(JwtAuthGuard)
@@ -31,7 +36,22 @@ export class EventsController {
   @RequirePermissions('events.create')
   @Post()
   async create(
-    @Body() body: { title: string; description: string; location?: string; startDate: string; endDate?: string; imageUrl?: string; stateId?: string; status?: ContentStatus },
+    @Body()
+    body: {
+      title: string;
+      description: string;
+      location?: string;
+      category?: string;
+      startDate: string;
+      endDate?: string;
+      imageUrl?: string;
+      images?: string[];
+      videoUrl?: string;
+      videos?: string[];
+      isPast?: boolean;
+      stateId?: string;
+      status?: ContentStatus;
+    },
     @CurrentUser() user: User,
   ) {
     return successResponse(
@@ -43,6 +63,38 @@ export class EventsController {
         createdById: user.id,
       }),
       'Event created',
+    );
+  }
+
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions('events.update')
+  @Patch(':id')
+  async update(
+    @Param('id') id: string,
+    @Body()
+    body: {
+      title?: string;
+      description?: string;
+      location?: string;
+      category?: string;
+      startDate?: string;
+      endDate?: string;
+      imageUrl?: string;
+      images?: string[];
+      videoUrl?: string;
+      videos?: string[];
+      isPast?: boolean;
+      stateId?: string;
+      status?: ContentStatus;
+    },
+  ) {
+    return successResponse(
+      await this.service.update(id, {
+        ...body,
+        startDate: body.startDate ? new Date(body.startDate) : undefined,
+        endDate: body.endDate ? new Date(body.endDate) : undefined,
+      }),
+      'Event updated',
     );
   }
 

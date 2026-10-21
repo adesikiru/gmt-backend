@@ -6,13 +6,21 @@ import { ContentStatus } from '@prisma/client';
 export class EventsService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll(stateId?: string, userId?: string) {
+  async findAll(stateId?: string, userId?: string, isPast?: boolean) {
+    const whereClause: Record<string, unknown> = {
+      status: 'PUBLISHED',
+      ...(stateId ? { OR: [{ stateId }, { stateId: null }] } : {}),
+    };
+    if (isPast !== undefined) {
+      whereClause.isPast = isPast;
+    }
+
     const events = await this.prisma.event.findMany({
-      where: { status: 'PUBLISHED', ...(stateId ? { OR: [{ stateId }, { stateId: null }] } : {}) },
+      where: whereClause,
       include: {
         rsvps: { select: { userId: true } },
       },
-      orderBy: { startDate: 'asc' },
+      orderBy: { startDate: isPast ? 'desc' : 'asc' },
     });
 
     return events.map((ev) => {
@@ -25,13 +33,22 @@ export class EventsService {
     });
   }
 
-  async findOne(id: string) {
-    return this.prisma.event.findUnique({
+  async findOne(id: string, userId?: string) {
+    const event = await this.prisma.event.findUnique({
       where: { id },
       include: {
         rsvps: { select: { userId: true } },
       },
     });
+
+    if (!event) return null;
+
+    const { rsvps, ...rest } = event;
+    return {
+      ...rest,
+      rsvpCount: rsvps.length,
+      userRsvp: userId ? rsvps.some((r) => r.userId === userId) : false,
+    };
   }
 
   async toggleRsvp(eventId: string, userId: string) {
@@ -61,8 +78,47 @@ export class EventsService {
     };
   }
 
-  async create(data: { title: string; description: string; location?: string; startDate: Date; endDate?: Date; imageUrl?: string; stateId?: string; createdById: string; status?: ContentStatus }) {
+  async create(data: {
+    title: string;
+    description: string;
+    location?: string;
+    category?: string;
+    startDate: Date;
+    endDate?: Date;
+    imageUrl?: string;
+    images?: string[];
+    videoUrl?: string;
+    videos?: string[];
+    isPast?: boolean;
+    stateId?: string;
+    createdById: string;
+    status?: ContentStatus;
+  }) {
     return this.prisma.event.create({ data });
+  }
+
+  async update(
+    id: string,
+    data: Partial<{
+      title: string;
+      description: string;
+      location?: string;
+      category?: string;
+      startDate: Date;
+      endDate?: Date;
+      imageUrl?: string;
+      images?: string[];
+      videoUrl?: string;
+      videos?: string[];
+      isPast?: boolean;
+      stateId?: string;
+      status?: ContentStatus;
+    }>,
+  ) {
+    return this.prisma.event.update({
+      where: { id },
+      data,
+    });
   }
 
   async updateStatus(id: string, status: ContentStatus) {

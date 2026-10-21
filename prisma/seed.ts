@@ -163,45 +163,134 @@ async function main() {
     }
   }
 
-  // Seed Events
+  // Seed Delta and Zamfara States
+  const deltaState = await prisma.state.upsert({
+    where: { code: 'DE' },
+    update: {},
+    create: { name: 'Delta State', code: 'DE' },
+  });
+
+  const zamfaraState = await prisma.state.upsert({
+    where: { code: 'ZA' },
+    update: {},
+    create: { name: 'Zamfara State', code: 'ZA' },
+  });
+
+  // Seed Events (Real Upcoming and Past Inauguration Events with photos & videos)
   const SEED_EVENTS = [
+    // PAST EVENTS: INAUGURATIONS
     {
-      title: 'Ogun Central Grassroots Leadership Townhall',
+      title: 'Delta State Chapter Grand Inauguration & Executive Swearing-In Ceremony',
+      category: 'Inauguration Ceremony',
+      description: 'Historic inaugural congress and formal swearing-in ceremony of the Delta State GMT Executive Council, Senatorial Coordinators, and 25 Local Government Area leadership committees. The momentous gathering featured keynote addresses from national leadership, unveiling of the Delta State Grassroots Mobilization Charter, and extensive strategic alignment for ward-level voter empowerment across Delta North, Delta Central, and Delta South senatorial districts.',
+      location: 'The Dome Event Centre, Okpanam Road, Asaba, Delta State',
+      startDate: new Date(Date.now() - 35 * 24 * 60 * 60 * 1000), // -35 days
+      endDate: new Date(Date.now() - 35 * 24 * 60 * 60 * 1000 + 5 * 60 * 60 * 1000),
+      isPast: true,
+      status: 'PUBLISHED' as const,
+      imageUrl: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80',
+      images: [
+        'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80',
+        'https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&w=1200&q=80',
+        'https://images.unsplash.com/photo-1515187029135-18ee286d815b?auto=format&fit=crop&w=1200&q=80',
+        'https://images.unsplash.com/photo-1475721027785-f74eccf877e2?auto=format&fit=crop&w=1200&q=80',
+      ],
+      videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+      videos: [
+        'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+      ],
+      stateId: deltaState.id,
+      createdById: adminUserId,
+    },
+    {
+      title: 'Zamfara State Grassroots Mobilization & Chapter Inauguration Assembly',
+      category: 'Inauguration Ceremony',
+      description: 'A landmark gathering of grassroots stakeholders, community elders, and youth delegates across the 14 LGAs of Zamfara State for the formal inauguration of the State Working Committee. Deliberations centered on rural cooperative networks, digital membership registration at polling units, and expanding social empowerment schemes for local artisans, farmers, and women leaders.',
+      location: 'Gusau Trade Fair Complex, By-Pass Road, Gusau, Zamfara State',
+      startDate: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000), // -20 days
+      endDate: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000 + 6 * 60 * 60 * 1000),
+      isPast: true,
+      status: 'PUBLISHED' as const,
+      imageUrl: 'https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&w=1200&q=80',
+      images: [
+        'https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&w=1200&q=80',
+        'https://images.unsplash.com/photo-1505373877841-8d25f7d46678?auto=format&fit=crop&w=1200&q=80',
+        'https://images.unsplash.com/photo-1528605248644-14dd04022da1?auto=format&fit=crop&w=1200&q=80',
+      ],
+      videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+      videos: [
+        'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+      ],
+      stateId: zamfaraState.id,
+      createdById: adminUserId,
+    },
+    // UPCOMING EVENTS
+    {
+      title: 'National Grassroots Campaign Flag-Off & Stakeholders Summit',
+      category: 'Campaign Flag-Off',
+      description: 'Official national launch of the grassroots voter mobilization campaign. Bringing together national patrons, regional directors, state executive chairs, and ward champions to unveil our nationwide digital registration drive, grassroots outreach tools, and voter education tour across all six geopolitical zones.',
+      location: 'International Conference Centre (ICC), Central Area, Abuja FCT',
+      startDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000), // +10 days
+      endDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000 + 5 * 60 * 60 * 1000),
+      isPast: false,
+      status: 'PUBLISHED' as const,
+      imageUrl: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=1200&q=80',
+      images: [
+        'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=1200&q=80',
+        'https://images.unsplash.com/photo-1505373877841-8d25f7d46678?auto=format&fit=crop&w=1200&q=80',
+      ],
+      videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+      videos: [],
+      stateId: null, // National event
+      createdById: adminUserId,
+    },
+    {
+      title: 'Ogun State Grassroots Mobilization & Ward Strategy Congress',
+      category: 'Leadership Summit',
       description: 'Strategic gathering of ward mobilizers and grassroots executives to discuss development initiatives, voter sensitization, and community empowerment across Abeokuta and surrounding constituencies.',
       location: 'June 12 Cultural Centre, Kuto, Abeokuta',
       startDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000), // +14 days
       endDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000 + 4 * 60 * 60 * 1000),
+      isPast: false,
       status: 'PUBLISHED' as const,
+      imageUrl: 'https://images.unsplash.com/photo-1515187029135-18ee286d815b?auto=format&fit=crop&w=1200&q=80',
+      images: [
+        'https://images.unsplash.com/photo-1515187029135-18ee286d815b?auto=format&fit=crop&w=1200&q=80',
+      ],
+      videoUrl: '',
+      videos: [],
       stateId: ogunState.id,
       createdById: adminUserId,
     },
     {
       title: 'Ward Coordinators Digital Verification Workshop',
+      category: 'Training Workshop',
       description: 'Comprehensive technical workshop training ward administrators and polling unit leads on verifying voter records, NIN validation, and registering new grassroots members.',
       location: 'Ijebu-Ode Town Hall, Ijebu-Ode',
       startDate: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000), // +21 days
       endDate: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000 + 5 * 60 * 60 * 1000),
+      isPast: false,
       status: 'PUBLISHED' as const,
+      imageUrl: 'https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&w=1200&q=80',
+      images: [],
+      videoUrl: '',
+      videos: [],
       stateId: ogunState.id,
       createdById: adminUserId,
     },
     {
       title: 'Grassroots Farmers & SME Cooperative Forum',
+      category: 'Empowerment',
       description: 'Distribution of agricultural inputs, high-yield seedlings, fertilizer vouchers, and SME seed grants to rural cooperative members across Ogun State.',
       location: 'Sango-Ota Community Centre, Ota',
       startDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // +30 days
       endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000 + 4 * 60 * 60 * 1000),
+      isPast: false,
       status: 'PUBLISHED' as const,
-      stateId: ogunState.id,
-      createdById: adminUserId,
-    },
-    {
-      title: 'Ogun West Youth Innovation & Leadership Summit',
-      description: 'Interactive symposium connecting young tech innovators, artisans, and student leaders with mentorship, startup grants, and digital skill vouchers.',
-      location: 'Ilaro Civic Centre, Ilaro',
-      startDate: new Date(Date.now() + 40 * 24 * 60 * 60 * 1000), // +40 days
-      endDate: new Date(Date.now() + 40 * 24 * 60 * 60 * 1000 + 5 * 60 * 60 * 1000),
-      status: 'PUBLISHED' as const,
+      imageUrl: 'https://images.unsplash.com/photo-1593113598332-cd288d649433?auto=format&fit=crop&w=1200&q=80',
+      images: [],
+      videoUrl: '',
+      videos: [],
       stateId: ogunState.id,
       createdById: adminUserId,
     },
@@ -211,9 +300,14 @@ async function main() {
     const existing = await prisma.event.findFirst({ where: { title: evt.title } });
     if (!existing) {
       await prisma.event.create({ data: evt });
+    } else {
+      await prisma.event.update({
+        where: { id: existing.id },
+        data: evt,
+      });
     }
   }
-  console.log(`✅ ${SEED_EVENTS.length} Events seeded`);
+  console.log(`✅ ${SEED_EVENTS.length} Events seeded/updated`);
 
   // Seed Empowerments
   const SEED_EMPOWERMENTS = [
